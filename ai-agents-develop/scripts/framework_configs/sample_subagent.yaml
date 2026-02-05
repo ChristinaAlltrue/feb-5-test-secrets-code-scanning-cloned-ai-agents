@@ -1,0 +1,89 @@
+framework_id: Subagent-Test-Framework
+framework_name: Subagent Test
+framework_description: |
+  Compliance automation for SAMPLE process validation.
+
+execution:
+  auto_create: true
+  name: Initial Control Group Execution
+  type: On Demand
+
+controls:
+  - name: Supervisor - Two Actions
+    instructions: |
+      **SKIP COMPLIANCE CHECK**
+    action_list:
+      - action_name: First-Action
+        action_prototype_name: SupervisorAgent
+        order: 0
+        category: Supervisor
+        control_variables:
+          tools:
+            value_type: primitive
+            value:
+              - generic_gmail_agent_tool
+          task_description:
+            value_type: primitive
+            value: "You are to do the complex mathematics calculations as per the task description. Tell me the output of 87-65*23 and wait. On Resume, assume that the task is completed."
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Check if there are any emails related to REQ-3114054"
+              description: Primary task description for the supervisor agent
+
+
+      - action_name: Send Findings to shaw@alltrue.ai
+        action_prototype_name: SupervisorAgent
+        order: 1
+        category: Supervisor
+        # reference_variables:
+        #   previous_result:
+        #     value_type: ref
+        #     action_index: 0
+        #     field: output
+        control_variables:
+          task_description:
+            value_type: primitive
+            value: "Tell me distance between earth and mars, and tell me the distance between earth and moon."
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Send the results of Action 1 to shaw@alltrue.ai"
+              description: Supervisor instruction for forwarding results
+        subagents:
+          - tool_id: MathsAgent
+            tool_display_name: MathsAgent
+            tool_description: An agent expert in mathematics
+            prompt: "You are maths expert agent"
+            children:
+              - tool_id: CalculatorTool
+                tool_display_name: Calculator
+                tool_description: A simple calculator tool
+                prompt: "You are a calculator tool"
+              - tool_id: AdvancedCalculatorTool
+                tool_display_name: Advanced Calculator
+                tool_description: An advanced calculator tool
+                prompt: "You are an advanced calculator tool"
+          - tool_id: PhysicsAgent
+            tool_display_name: Physics Agent
+            tool_description: An agent expert in Physics
+            prompt: "You are Physics expert agent, to calculate the distance between earth and moon, use the earth_moon_agent, to calculate the distance between earth and mars, use earth_mars_agent"
+            children:
+              - tool_id: EarthMoonAgent
+                tool_display_name: Earth Moon Distance Calculator
+                tool_description: Earth Moon Distance Calculator Agent
+                prompt: "You are a calculator tool that can tell the distance between earth and moon"
+              - tool_id: EarthMarsAgent
+                tool_display_name: Earth Mars Distance Calculator
+                tool_description: Earth Mars Distance Calculator Agent
+                prompt: "You are an advanced calculator tool that tell the distance between earth and mars"
+
+    entities:
+      - name: "One Entity"
+        independent_variables:
+          - additional_description: ""
+          - additional_description: ""

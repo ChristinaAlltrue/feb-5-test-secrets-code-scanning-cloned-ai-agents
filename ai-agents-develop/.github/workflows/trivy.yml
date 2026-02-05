@@ -1,0 +1,114 @@
+name: Trivy SBOM Scan
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs every Sunday at 8:05 AM UTC
+    - cron: '5 8 * * 0'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sbom_scan_and_issue:
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download SBOM from GitHub API
+        id: download_sbom
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER_REPO: ${{ github.repository }}
+        run: |
+          SBOM_FILE="sbom.spdx.json"
+          echo "Attempting to fetch SBOM for repository: $OWNER_REPO"
+
+          # Initialize outputs
+          echo "sbom_available=false" >> $GITHUB_OUTPUT
+          echo "sbom_filepath=$SBOM_FILE" >> $GITHUB_OUTPUT
+
+          # Try to download SBOM from GitHub API
+          if gh api "repos/$OWNER_REPO/dependency-graph/sbom" --jq '.sbom' > "$SBOM_FILE" 2>/dev/null; then
+            if [ -s "$SBOM_FILE" ] && jq empty "$SBOM_FILE" 2>/dev/null; then
+              echo "SBOM downloaded successfully from GitHub API: $SBOM_FILE"
+              echo "sbom_available=true" >> $GITHUB_OUTPUT
+            else
+              echo "Warning: SBOM downloaded but is empty or invalid JSON. Will attempt filesystem scan."
+              rm -f "$SBOM_FILE"
+            fi
+          else
+            echo "Warning: Failed to download SBOM using GitHub API. Will attempt filesystem scan."
+          fi
+
+      - name: Run Trivy Scan
+        id: trivy_scan
+        env:
+          SBOM_AVAILABLE: ${{ steps.download_sbom.outputs.sbom_available }}
+          SBOM_FILEPATH: ${{ steps.download_sbom.outputs.sbom_filepath }}
+        run: |
+          TRIVY_TABLE_OUTPUT="trivy-results-table.txt"
+          TRIVY_JSON_OUTPUT="trivy-results.json"
+          TRIVY_EXIT_CODE=0
+          CURRENT_SCAN_TYPE="none"
+
+          # Initialize outputs
+          echo "exit_code=0" >> $GITHUB_OUTPUT
+          echo "results_table_path=$TRIVY_TABLE_OUTPUT" >> $GITHUB_OUTPUT
+          echo "results_json_path=$TRIVY_JSON_OUTPUT" >> $GITHUB_OUTPUT
+          echo "scan_type=none" >> $GITHUB_OUTPUT
+
+          export TRIVY_DISABLE_VEX_NOTICE="true"
+
+          # Check if SBOM was available and the file exists and is not empty
+          if [ "$SBOM_AVAILABLE" == "true" ] && [ -s "$SBOM_FILEPATH" ]; then
+            echo "Scanning SBOM file with Trivy: $SBOM_FILEPATH"
+            CURRENT_SCAN_TYPE="sbom"
+
+            # Run Trivy scans for SBOM
+            trivy sbom --severity HIGH,CRITICAL --format table --output "$TRIVY_TABLE_OUTPUT" "$SBOM_FILEPATH" || true
+            trivy sbom --severity HIGH,CRITICAL --format json --output "$TRIVY_JSON_OUTPUT" "$SBOM_FILEPATH" --exit-code 1 || TRIVY_EXIT_CODE=$?
+          else
+            echo "SBOM not available. Scanning repository filesystem with Trivy."
+            CURRENT_SCAN_TYPE="filesystem"
+
+            # Run Trivy scans for filesystem
+            trivy fs --severity HIGH,CRITICAL --format table --output "$TRIVY_TABLE_OUTPUT" . || true
+            trivy fs --severity HIGH,CRITICAL --format json --output "$TRIVY_JSON_OUTPUT" . --exit-code 1 || TRIVY_EXIT_CODE=$?
+          fi
+
+          echo "Trivy scan finished. Exit Code: $TRIVY_EXIT_CODE"
+          echo "exit_code=$TRIVY_EXIT_CODE" >> $GITHUB_OUTPUT
+          echo "scan_type=$CURRENT_SCAN_TYPE" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Issue if vulnerabilities found
+        if: steps.trivy_scan.outputs.exit_code == '1'
+        uses: peter-evans/create-issue-from-file@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "High/Critical Vulnerabilities Detected by Trivy (${{ steps.trivy_scan.outputs.scan_type }} scan)"
+          content-filepath: ${{ steps.trivy_scan.outputs.results_table_path }}
+          assignees: tamir-alltrue-ai
+          labels: |
+            security
+            vulnerability
+            trivy
+
+      - name: Output Scan Summary
+        if: always()
+        run: |
+          echo "=== Trivy Scan Summary ==="
+          echo "SBOM Available from API: ${{ steps.download_sbom.outputs.sbom_available }}"
+          echo "SBOM Filepath: ${{ steps.download_sbom.outputs.sbom_filepath }}"
+          echo "Trivy Scan Type: ${{ steps.trivy_scan.outputs.scan_type }}"
+          echo "Trivy Exit Code: ${{ steps.trivy_scan.outputs.exit_code }}"
+
+          if [ "${{ steps.trivy_scan.outputs.exit_code }}" == "1" ]; then
+            echo "⚠️  High/Critical vulnerabilities found. GitHub issue created."
+          elif [ "${{ steps.trivy_scan.outputs.exit_code }}" == "0" ]; then
+            echo "✅ No High/Critical vulnerabilities found."
+          else
+            echo "❌ Trivy scan encountered an error (exit code: ${{ steps.trivy_scan.outputs.exit_code }})."
+          fi

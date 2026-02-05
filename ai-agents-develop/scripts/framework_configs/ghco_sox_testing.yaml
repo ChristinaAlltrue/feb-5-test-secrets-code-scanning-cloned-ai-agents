@@ -1,0 +1,1196 @@
+framework_id: SOX-Framework
+framework_name: SOX Framework
+framework_description: Auditing for GHCO.
+
+execution:
+  auto_create: true
+  name: 2025 Nov
+  type: On Demand
+
+controls:
+  - name: AC2 User Provisioning Testing
+    instructions: Access to systems relevant to financial reporting must be granted based on approved requests that align with users' job responsibilities and the principle of least privilege. All new user access must be formally requested, reviewed, and approved by authorized personnel before being provisioned. Documentation of approvals and access rights must be retained. Segregation of duties should be enforced, and any exceptions must be reviewed and approved by management.
+
+    action_list:
+      - action_name: Request Agent
+        action_prototype_name: SupervisorAgent
+        order: 0
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: generic_gmail_agent_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Instant
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: browser_tool
+                  selected_model:
+                    value_type: primitive
+                    value: Gemini 2.5 Flash
+          task_description:
+            value_type: primitive
+            value: |
+              Your tasks:
+              1. Create requests for each software application using the browser_tool and extract tracking ID(s), ensure all requests are created successfully, retry once when browser_tool returns error
+              2. Wait for Business Unit (BU) to submit required files by using trigger_pause
+              3. When resuming, check the inbox and get the email content of the tracking ID(s), download the file from the request page using the link provided in the email and wait again for any remaining software applications, pause again if needed. Never proceed until there is at least one file downloaded for each software application
+
+              Config:
+              homepage_url: https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx
+
+              When creating requests:
+              - Use the provided template and fill in the software name dynamically
+              - Extract and record tracking IDs for each request
+              - Create requests for all software in the list
+                Template for giving browser_tool a task:
+                  <template>
+                  Target Business Unit: "{target_business_unit}"
+                  Home page: {homepage_url}
+                  Year: {year}
+                  Season: {season}
+
+                  Navigate to the home page and wait for 8 seconds for the page to load.
+
+                  Steps to reach I.T. Assessments page:
+                  (1) Navigate to 'Filter' input field on the left.
+                  (2) Input text 'I.T. Assessments (2022 - forward)' to field 'Filter'.
+                  (3) Click "I.T. Assessments (2022 - forward)" under "ITGC 2024"
+
+                  Under the first column Assessment of the table, you can find the clickable cells for different business unit. The names are in <Year> (<Season>) - <Business Unit>
+                  Find the one for the target business unit and click it.
+
+                  After going into the specific page, there is a button Add New, click it to create a new request.
+                  Fill the form with the following 6 entries:
+                  {{
+                      "Test Period": "Interim"
+                      "Control Area": "AC01"
+                      "Request Description": "Current {software} application user list
+              Please generate a user list for the {software} application, including data generated and all user roles. Include evidence of how the list was generated as well."
+                      "Date Due": <Two weeks from today (date are usually in MM/DD/YYYY format)>
+                      "Requested by": "agent, AI Auditor" (You need to search the name using the UI)
+                      "BU Contact(s)": "{bu_contact}"
+                  }}
+                  Double check that you filled in all the fields correctly and click the Save button.
+                  When a warning pop-up shows up, check what's the problem and resolve it accordingly.
+                  Upon successful save, Tracking ID would be shown on the page, write it down.
+                  </template>
+
+              When resuming from BU submission:
+              - The email subject would be in the format of Updated Request for ..., get the link to the request page from the body, and use browser_tool to download the file from the request page
+                  - example task: "Go to <link>. Click to download all the files shown on this page. Close the browser after downloading or when there is no file to download. Return the path of the downloaded file."
+
+              When preparing files to compare:
+              - The files are organized in the folder 1UqUcpHpVI-85-83Vhz_Ln_BcmGGBZ2qp
+              - The files are put into different folders according to their software names
+              - Give the current file name as an example and ask the tool `find_and_download_previous_file` to return the latest file to compare
+
+              Always be thorough and provide detailed feedback about the request creation and file collection process.
+
+              Only 1 browser_tool is allowed at a time.
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: File Preparation Agent
+        action_prototype_name: SupervisorAgent
+        order: 1
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: google_drive_mcp_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Instant
+          task_description:
+            value_type: primitive
+            value: |
+              Your tasks:
+              1. Download the template file (1L2b6oxO0mR_0ee5oXgw0hve7rm2xpmC6) from Google Drive
+              2. Download previous files to compare from Google Drive
+
+              Pause when you cannot find the file to compare for any software application, wait for human to upload the missing file to Google Drive and resume
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Sampling Agent
+        action_prototype_name: SupervisorAgent
+        order: 2
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: advanced_data_analysis_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Thinking
+          task_description:
+            value_type: primitive
+              # 5. Perform analysis by passing all the paths of files and instruction to the Advanced Data Analysis, return the path of the excel generated
+            value: |
+              When performing analysis, use the follow instruction:
+                You are an intelligent IT Audit Analysis Agent. Analyze all the uploaded files and perform appropriate audit testing. Based on the output excel template columns, extract required information and fill the excel.
+
+                SOFTWARES: {software_list}
+
+                TECHNICAL GUIDANCE:
+                - Use your own visual capability for images, do not rely on OCR since it may be inaccurate and the spacial information will be lost easily
+                - Use your own visual capability for PDFs since the layout is important, get text from PDF only when image is too blur
+                - Only write code for complex analysis, otherwise, just get the text and output your answers to the output file. Do not use code to extract information since there would be too many edge cases
+                - You must ensure that all fields are filled
+
+                REPORT REQUIREMENTS:
+                - Compare current vs previous versions
+                - Identify new accounts, permission changes, updates
+                - Ignore removed accounts when performing analysis
+                - Calculate populations and sample sizes using frequency mapping (>260=20, 53-260=15, etc.)
+                    FREQUENCY_MAPPING = {
+                        "> 260": "Multiple Times Per Day",
+                        "53-260": "Daily",
+                        "13-52": "Weekly",
+                        "5-12": "Monthly",
+                        "3-4": "Quarterly",
+                        "2": "Semi-Annual",
+                        "1": "Annual"
+                    }
+
+                    SAMPLE_SIZE_MAPPING = {
+                        "Multiple Times Per Day": 20,
+                        "Daily": 15,
+                        "Weekly": 3,
+                        "Monthly": 1,
+                        "Quarterly": 1,
+                        "Semi-Annual": 1,
+                        "Annual": 1
+                    }
+
+                **Sampling Rules (to align with auditor practice):**
+                - When multiple applications are included, weight sample selection by each application's population size of new/updated users.
+                - Determine frequency by extrapolating observed interim counts to a full year when necessary.
+                - Target sample size and cap
+                  - Use the frequency mapping to set the target sample size (e.g., Daily = 15). Enforce a hard cap at the mapped size.
+                - Priority rules within the cap
+                  - Select within the cap using this order:
+                    1) Updated users whose access level increased to elevated (admin/privileged)
+                    2) New elevated users (admin/privileged)
+                    3) Other updated users (role/group changes not elevated)
+                    4) New standard users
+                  - If a priority tier has more candidates than remaining slots, pick by risk (external/service accounts, highest privilege, cross-system elevated), then randomize the remainder. Do not exceed the cap.
+                - Application weighting
+                  - Weight the 15 within the cap by each application's population share (quota = round(cap × app_population / total_population)). Allow a small flex (±1) to honor the priority rules. Keep total at the cap.
+                - Interim vs. year-end increments
+                  - Interim default = mapped size only (e.g., 15). Year-end incremental = +5 only if explicitly requested and no exceptions found. Do not add year-end items to the interim file by default.
+                - Documentation
+                  - Document counts by priority tier, risk factors used, any weighting adjustments, and final selection rationale.
+
+                DELIVERABLES:
+                - Your final output Excel file should be edited from the template Excel file, since it has the correct formatting
+                - Make sure to keep the column name and the formatting of all the cells as appropriate
+                - Be careful that there may be multiple header rows
+                - Separate any working tables with the final output file, strictly follow the template file, do not add new sheets to the final output file
+                - Copy the style of the sample rows to all the new rows
+                - The final output should be saved as AC2_New_user_Sample_for_Business_Unit.xlsx
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Request with file Agent
+        action_prototype_name: SupervisorAgent
+        order: 3
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: browser_tool
+                  selected_model:
+                    value_type: primitive
+                    value: Gemini 2.5 Flash
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: generic_gmail_agent_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Instant
+          task_description:
+            value_type: primitive
+              # 5. Perform analysis by passing all the paths of files and instruction to the Advanced Data Analysis, return the path of the excel generated
+            value: |
+              Your tasks:
+              1. Create a request to the BU asking for evidences, you should upload the User List excel from the previous step with full path.
+              2. Wait for Business Unit (BU) to submit required files by using trigger_pause
+              3. Download all the evidence file from the request page
+
+              Config:
+              homepage_url: https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx
+
+              When creating requests:
+              - Use the provided template and fill in the values
+              - Extract and record tracking IDs for the request
+                Template for giving browser_tool a task:
+                  <template>
+                      Target Business Unit: "{target_business_unit}"
+                      Home page: {homepage_url}
+                      Year: {year}
+                      Season: {season}
+
+                      Navigate to the home page and wait for 8 seconds for the page to load.
+
+                      Steps to reach I.T. Assessments page:
+                      (1) Navigate to 'Filter' input field on the left.
+                      (2) Input text 'I.T. Assessments (2022 - forward)' to field 'Filter'.
+                      (3) Click "I.T. Assessments (2022 - forward)" under "ITGC 2024"
+
+                      Under the first column Assessment of the table, you can find the clickable cells for different business unit. The names are in <Year> (<Season>) - <Business Unit>
+                      Find the one for the target business unit and click it.
+
+                      After going into the specific page, there is a button Add New, click it to create a new request.
+                      Fill the form with the following 6 entries:
+                      {{
+                          "Test Period": "Interim"
+                          "Control Area": "AC02"
+                          "Request Description": "New and updated User Sample
+              Please provide evidence showing the request, approval and provisioning for the attached list of users."
+                          "Date Due": <1 week from today (date are usually in MM/DD/YYYY format)>
+                          "Requested by": "agent, AI Auditor" (You need to search the name using the UI)
+                          "BU Contact(s)": "{bu_contact}"
+                      }}
+                      Upload the file located at {file_path} as Interim Evidence.
+                      Click Save button.
+                      Upon successful save, Tracking ID would be shown on the page, write it down.
+                  </template>
+
+              When resuming:
+              - Check the inbox of the email for notifications about file submissions, the subject would be in the format of Updated Request for ..., get the link to the request page from the email, and use browser_tool to download the file from the request page
+                  - example task: "Go to <link>. Click to download all the files shown on this page. Close the browser after downloading or when there is no file to download."
+
+
+              Always be thorough and provide detailed feedback about the request creation and file collection process.
+
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: File Preparation Agent
+        action_prototype_name: SupervisorAgent
+        order: 4
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: google_drive_mcp_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Instant
+          task_description:
+            value_type: primitive
+            value: |
+              Your tasks:
+              1. Download the template file (1utbPBSN38h_cKeLwYbXvqGzyDdoOFEMh) from Google Drive
+
+              Pause when you cannot find the file to compare for any software application, wait for human to upload the missing file to Google Drive and resume
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Test Provisioning Agent
+        action_prototype_name: SupervisorAgent
+        order: 5
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: advanced_data_analysis_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Thinking
+          task_description:
+            value_type: primitive
+            # 4. Perform analysis by passing all the paths of files downloaded in the previous step and instruction to the Advanced Data Analysis, return the path of the excel generated
+            value: |
+              When performing analysis, use the follow instruction:
+              You are an intelligent IT Audit Analysis Agent. Analyze all the uploaded files and perform appropriate audit testing. Based on the output excel template columns, extract required information and fill the excel.
+
+              SOFTWARES: {software_list}
+
+              TECHNICAL GUIDANCE:
+              - Use your own visual capability for images, do not rely on OCR since it may be inaccurate and the spacial information will be lost easily
+              - Use your own visual capability for PDFs since the layout is important, get text from PDF only when image is too blur
+              - Only write code for complex analysis, otherwise, just get the text and output your answers to the output file. Do not use code to extract information since there would be too many edge cases
+              - You must ensure that all fields are filled
+
+              DELIVERABLES:
+              - Your final output Excel file should be edited from the template Excel file, since it has the correct formatting
+              - Make sure to keep the column name and the formatting of all the cells as appropriate
+              - Be careful that there may be multiple header rows
+              - Separate any working tables with the final output file, strictly follow the template file, do not add new sheets to the final output file
+              - Copy the style of the sample rows to all the new rows
+              - The final output should be saved as AC2_Test_Worksheet.xlsx
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+    entities:
+      - name: "Test"
+        credentials:
+          - credential_name: GHCO-User-1
+          - credential_name: Auditor-Google-Token
+        independent_variables:
+          - additional_description: |-
+              Home Page: https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx
+              Target Business Unit: Cable Division: Cable ONE
+              Year: 2025
+              Season: Q4
+              BU Contact: agent, AI BU
+              Software list: BPCS, MRO, GDIHQ, Windows
+          - additional_description: ""
+          - additional_description: ""
+          - additional_description: |-
+              Home Page: https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx
+              Target Business Unit: 2025 Q4 Cable Division: Cable ONE
+              Year: 2025
+              Season: Q4
+              BU Contact: agent, AI BU
+              Software list: BPCS, MRO, GDIHQ, Windows
+          - additional_description: ""
+          - additional_description: ""
+
+  - name: AC9 Admin Access Testing
+    instructions: |
+      Examine the evidence files and update the AC9 testing workbook as per the provided template and instructions.
+
+    action_list:
+      - action_name: Request Collection Agent
+        action_prototype_name: SupervisorAgent
+        order: 0
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: browser_tool
+                  selected_model:
+                    value_type: primitive
+                    value: Gemini 2.5 Flash
+          task_description:
+            value_type: primitive
+            value: |
+              You are a GHCO Request Collection Agent that downloads all evidence files uploaded to request created by GHCO Request Agent, regardless of the quantity.
+
+              Your tasks:
+
+              Navigate to the request using the tracking ID provided. Here are the steps to find the old request:
+
+              Steps to Reach and Open the Request
+              1. Navigate to the 'Search' input field on the top, do not use Filter.
+              2. Input text '[Tracking ID]' into the search, the tracking Id is a placeholder, the Tracking ID must be referenced from Request Agent.
+              3. Click on the Tracking ID to open the request details page.
+              4. Read the request description and locate the section containing the evidence files (e.g., "interim evidence files" or equivalent attachment field).
+              5. Locate and extract all comments from the request (typically found in a "Interim Comments:" section on the request details page).
+
+              Evidence File Download Plan (Mandatory Iterative Download)
+              1. Count Files: Create a list of all evidence files attached to the request and store them in a list(Names should match exactly as per file names, you are not allowed to change file name under any circumstance).
+              2. Execute Download Loop: Initiate a download process that continues until the count of remaining files to be downloaded is zero.
+              3. Loop Condition: While the number of files available for download is greater than zero:
+              4. Select the next available file from the list.
+              5. Download the file by clicking on the file to local folder.
+              6. Verify the file has successfully saved and is complete.
+              7. Remove the downloaded file from the list of 'files to process' (or decrement the count).
+              8. Error Handling: Implement a retry mechanism within the loop for any file that fails to download or verify on the first attempt (retry up to 3 times per file).
+
+              You can stop if you cannot find the request using the provided Tracking ID on the specified page. Do not navigate to subsequent pages to search for the request.
+
+              Expected Output:
+              - Name of the files downloaded in a formatted manner.
+              - All comments extracted from the request.
+
+              Request pause if you are unable to complete the download.
+
+              On Resume: If the history states you were unable to download all files you should retry downloading the files unless your goal in achieved.
+
+              IMPORTANT: Make minimal changes to prompt that you give to browser tool as task, details are important and do not skip them, and must include the Download step in the task description for browser tool
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Prepare Previous Year File
+        action_prototype_name: SupervisorAgent
+        order: 1
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: google_drive_mcp_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Instant
+          task_description:
+            value_type: primitive
+            value: |
+              Download AC9 Template Spreadsheet from Google with id: 1HmuxPO0yxT53SwITaBhWnuSsWY_FWlmJ
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Administrator Auditor
+        action_prototype_name: SupervisorAgent
+        order: 2
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: advanced_data_analysis_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Thinking
+          task_description:
+            value_type: primitive
+            value: |
+              You should follow the template below to give advanced_data_analysis_tool a clear task:
+              <task template>
+                AC9 Admin Access Testing
+
+                Goal
+                - Update last year's AC9 testing workbook using this year's Archer exports.
+                - Preserve template structure/formatting. Append new rows only. No new sheets.
+
+                Inputs
+                - Application User List (users/roles)
+                - Admin Roles Definition
+                - Database User List or SQL role export
+                - Operating System Admin List (server local Admins)
+                - Active Directory Group Memberships
+                - Developer List (or “no developers” statement)
+                - Employee List/Org Chart
+                - Template Spreadsheet (last year's AC9 workbook)
+
+                Outputs
+                - Updated AC9 workbook (same two tabs only: “AC9” and “AC9 - Generic Accts”), with:
+                  - AC9 (people-only consolidated admin table)
+                  - AC9 - Generic Accts (all accounts including service/built-in)
+                  - Notes appended at the bottom of AC9
+                - Follow-up questions text for Archer
+
+                Golden Rules (must follow)
+                - Template integrity:
+                  - Do not add, delete, or move sheets.
+                  - Do not change or un/merge header cells.
+                  - Append rows only at the bottom of each section; never insert into existing data blocks.
+                  - Copy style from the last existing data row in that section for all new rows.
+                - Column discipline:
+                  - Keep Job Role in Job Role column; Auditor Comments in Auditor Comments column.
+                  - Do not repurpose columns.
+                - Built-in system admins:
+                  - Databases: If present, include NT AUTHORITY\SYSTEM, BUILTIN\Administrators, NT SERVICE\MSSQLSERVER, NT SERVICE\SQLSERVERAGENT, NT SERVICE\SQLWriter, NT SERVICE\Winmgmt (and any other NT SERVICE admins) in “AC9 - Generic Accts > Databases”.
+                  - Mark Admin=Yes if they have elevated roles; Interactive=No unless evidence states otherwise; explain as “built-in/non-interactive.”
+                  - They belong in Generic Accts, not in AC9 (people tab), and are not propagated unless confirmed interactive with named individuals.
+                - Service account propagation:
+                  - Propagate to people only when the service account is interactive AND named individuals are confirmed as having access.
+                  - If unknown, document in Generic Accts, mark “Interactive: Unknown,” and add a follow-up; do not propagate.
+                - Year-over-year:
+                  - Initially highlight all existing rows; unhighlight as you confirm each user this year.
+                  - Keep highlighted rows that are not present this year (removed users).
+                - Notes location:
+                  - Place Notes at the bottom of AC9 only, below the last data row, leaving a blank spacer row. Do not overwrite merged areas.
+
+                Step-by-step
+
+                1) Application administrators
+                - Read Admin Roles Definition; identify admin criteria (e.g., Superuser = TRUE).
+                - Filter Application User List on that criteria.
+                - Split into people vs service accounts (prefixes like SVC_, API_, GMG_, SQL_, WO_ or non-name patterns).
+                - People → AC9 tab (App Admin = X).
+                - Service accounts → AC9 - Generic Accts (Application section), with Admin=Yes/No, Interactive?, Explanation, Owner, Approved users, Comments.
+                - Add vendor note for WO_ accounts in Auditor Comments on AC9; vendors won't be in employee list.
+
+                2) Database administrators
+                - Include built-ins and NT SERVICE/NT AUTHORITY/BUILTIN admins in Generic Accts (Databases) as non-interactive (unless evidence).
+                - Identify domain/service accounts; split people vs service/built-ins.
+                - People → AC9 (DB Admin = X). Service/built-in → Generic Accts (Databases) with explanations.
+
+                3) Operating system administrators
+                - From OS Admin lists, capture local Administrators for in-scope servers.
+                - Expand any AD groups via the AD Group Membership export; list individual members and note group source in Server/Group.
+                - Domain Admins implies OS admin everywhere; note “Domain Admins” in Server/Group.
+                - People → AC9. Service/generic/local technical accounts → Generic Accts (OS).
+
+                4) Consolidate to AC9 (people-only)
+                - Start with last year's AC9:
+                  - Highlight all existing rows.
+                  - Unhighlight when matched in current data.
+                - One row per person; mark X for App/DB/OS/Domain Admin.
+                - Server/Group: include server names and AD groups; use “All servers” for Domain Admins.
+                - Deduplicate by User ID; combine groups/servers in the same row.
+
+                5) Developers
+                - If developer list provided, mark “Is this person a developer?” = X for matches.
+                - Any Admin + Developer = VIOLATION; note in Auditor Comments.
+                - If “no developers,” add that statement to Notes.
+
+                6) Job roles (AC9)
+                - Look up in the Employee List; fill Job Role as “Job Title - Department.”
+                - If vendor or not found, note accordingly in Job Role and Auditor Comments.
+
+                7) Service accounts (Generic Accts)
+                - Application, Databases, Operating Systems sections:
+                  - Include all service and built-in accounts (explicitly list NT/BUILTIN principals in Databases).
+                  - Fill Admin privilege, Interactive?, Explanation, Business Owner, Individuals approved, Auditor Comments.
+                  - Only propagate to AC9 if interactive + named individuals confirmed.
+                - Mark new vs existing; keep year-over-year notes.
+
+                8) SOD review (AC9 after propagation)
+                - Flag:
+                  - App + DB
+                  - App + OS
+                  - DB + OS
+                  - Any admin + Developer (VIOLATION)
+                  - All three (App + DB + OS) = high concern
+                - Put concise notes in Auditor Comments (e.g., “SOD: App + DB admin”; “Has access to SA service account”).
+
+                9) Notes (append at bottom of AC9)
+                - Notes from previous follow-up request that explain why a user's access is valid
+                - Admin Role Definitions
+
+                Formatting and QA safeguards
+                - Append-only: add new rows after last data row; do not insert into existing data blocks.
+                - Style copy: copy the last original data row (not header row) style for every new row; do not touch header merges.
+                - Column mapping: use fixed column indices by header labels; never write Job Role into Auditor Comments.
+                - Validation before save:
+                  - Sheet names unchanged; merged ranges unchanged.
+                  - Column widths and header rows unchanged.
+                  - Counts: rows added/updated; change log for audit trail.
+
+                Follow-up request (Archer) - structure
+                - Start: “Questions around service accounts:”
+                - Numbered questions; bullets for sub-questions.
+                - Group “who has access” items together at the end.
+                - Quote last year's documentation when verifying.
+                - Ask if interactive and who can use it for each new/changed service account.
+                - Request full membership for key AD groups (Domain Admins, SCCM Admins, etc.) if needed for OS admin expansion.
+
+                <Any information that is useful for the task>
+              </task template>
+              No need to pass full path in the prompt.
+
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+    entities:
+      - name: "Test"
+        credentials:
+          - credential_name: GHCO-User-1
+          - credential_name: Auditor-Google-Token
+        independent_variables:
+          - additional_description: |-
+              Home Page: https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx
+              Target Business Unit: 2025 Q4 Cable Division: Cable ONE
+              The tracking IDs are ["REQ-3115145", "REQ-3115077", "REQ-3115076", "REQ-3115088", "REQ-3115187", "REQ-3115144"]
+
+              You may use multiple browser_tool at the same time to speed up the process.
+          - additional_description: ""
+          - additional_description: ""
+
+
+  - name: CO2 Operational Change Testing
+    instructions: All changes to systems, applications, or code that may affect financial reporting must be formally requested, reviewed, approved, tested, and documented prior to implementation. Change requests should include sufficient details (purpose, scope, risk assessment, and approvers). Only authorized personnel may promote changes to production environments. Evidence of review, approval, and testing must be retained to support audit requirements.
+
+    action_list:
+      - action_name: Request Agent
+        action_prototype_name: SupervisorAgent
+        order: 0
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: browser_tool
+                  selected_model:
+                    value_type: primitive
+                    value: Gemini 2.5 Flash
+          task_description:
+            value_type: primitive
+            value: |
+              You are a GHCO Request Agent who creates audit requests for the business Unit.
+
+              Your tasks:
+              Create requests for one Business Unit and extract its tracking ID, and ensure the request is created successfully.
+              When creating requests:
+              - Use the provided template and fill in the software name dynamically
+              - Extract and record tracking IDs for each request
+              - Create requests for all software in the list
+
+              Steps to reach the I.T. Assessments page:
+              (1) Navigate to the Home Page URL of Application: https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx
+              (2) Navigate to the 'Filter' input field on the left.
+              (3) Input text 'I.T. Assessments (2022 - forward)' to the field 'Filter'.
+              (4) Click "I.T. Assessments (2022 - forward)" under "ITGC 2024"
+              Under the first column, Assessment of the table, you can find the clickable cells for different business units. The names are in <Year> (<Season>) - <Business Unit>
+              Find the one for the target business unit and click it.
+
+              After going into the specific page, there is a button Add New, click it to create a new request.
+
+              Make sure Interim is selected before clicking the Save button. Keep clicking Save until the Tracking ID appears on the screen.
+              Record the Tracking ID.
+              You must find the tracking ID on the page.
+              After clicking the Save button, a Tracking ID will be generated, it is in the format REQ-xxxxxxx, where xxxxxxx is a series of numbers.
+
+              In case of an error, a pop-up will open mentioning missing data, fill in the data, and continue with the usual steps.
+
+              Tracking ID:
+
+
+              Expected Output: Output the Tracking ID from the application, outputted as REQ-xxxxxxx. Do not make up the ID if you can't find it; you can output that you are unable to find the ID.
+
+              After creating the request request pause. If you are resuming, assume that the task has already been completed. You must always create a request even if the existing request exists.
+
+              IMPORTANT: Make minimal changes to prompt that you give to browser tool as task, details are important and do not skip them, and must include the Download step in the task description for browser tool
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Request Collection Agent
+        action_prototype_name: SupervisorAgent
+        order: 1
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: browser_tool
+                  selected_model:
+                    value_type: primitive
+                    value: Gemini 2.5 Flash
+          task_description:
+            value_type: primitive
+            value: |
+              You are a GHCO Request Collection Agent that downloads all evidence files uploaded to request created by GHCO Request Agent, regardless of the quantity.
+
+              Your tasks:
+
+              Navigate to the request using the tracking ID provided by the GHCO Request Agent. Here are the steps to find the old request:
+
+              Steps to Reach and Open the Request
+              1. Navigate to the 'Search' input field on the top, do not use Filter.
+              2. Input text '[Tracking ID]' into the search, the tracking Id is a placeholder, the Tracking ID must be referenced from Request Agent.
+              3. Click on the Tracking ID to open the request details page.
+              4. Read the request description and locate the section containing the evidence files (e.g., "interim evidence files" or equivalent attachment field).
+
+              Evidence File Download Plan (Mandatory Iterative Download)
+              1. Count Files: Create a list of all evidence files attached to the request and store them in a list(Names should match exactly as per file names, you are not allowed to change file name under any circumstance).
+              2. Execute Download Loop: Initiate a download process that continues until the count of remaining files to be downloaded is zero.
+              3. Loop Condition: While the number of files available for download is greater than zero:
+              4. Select the next available file from the list.
+              5. Download the file by clicking on the file to local folder.
+              6. Verify the file has successfully saved and is complete.
+              7. Remove the downloaded file from the list of 'files to process' (or decrement the count).
+              8. Error Handling: Implement a retry mechanism within the loop for any file that fails to download or verify on the first attempt (retry up to 3 times per file).
+
+              You can stop if you cannot find the request using the provided Tracking ID on the specified page. Do not navigate to subsequent pages to search for the request.
+
+              Expected Output: Name of the files downloaded in a formatted manner.
+
+              Request pause if you are unable to complete the download.
+
+              On Resume: If the history states you were unable to download all files you should retry downloading the files unless your goal in achieved.
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Population and Sampling Agent
+        action_prototype_name: SupervisorAgent
+        order: 2
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: advanced_data_analysis_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Thinking
+          task_description:
+            value_type: primitive
+            value: |
+              You are a Population and Sampling Agent. Your task is to analyze the sample size for auditing purposes.
+
+              In the previous step, you downloaded all the evidence files uploaded to the requests created by the GHCO Request Agent.
+
+              Now, you need to analyze the sample size of software usage based on the provided data.
+              Note: The Highest level of accuracy is expected for this task.
+              You need to calculate the total number of records for 4 different categories from the input data:
+              Do not count the header row if there is one.
+              1. Stories: Locate the data relevant to KFCS Stories for Deployment and precisely calculate the total number of records.
+              2. Maintenance: Locate the data relevant to KFCS Maintenance and precisely calculate the total number of records.
+              3. KRFCs (SOX Impact): Locate the data relevant to KRFCs (SOX Impact) and calculate the total number of records; make sure SOX Impact is Yes.
+              4. Oracle Patches: Locate the data relevant to KFCS stories for patches and calculate the total number of records.
+
+              The data might be in different files; you need to read all files and calculate the total number of records for each category.
+              Here is the mapping of the frequency and sample size. You have to use it when you generate the report.
+                              FREQUENCY_MAPPING = {
+                              "> 260": "Multiple Times Per Day",
+                              "53-260": "Daily",
+                              "13-52": "Weekly",
+                              "5-12": "Monthly",
+                              "3-4": "Quarterly",
+                              "2": "Semi-Annual",
+                              "1": "Annual"
+                              }
+                              SAMPLE_SIZE_MAPPING = {
+                                  "Multiple Times Per Day": 20,
+                                  "Daily": 15,
+                                  "Weekly": 3,
+                                  "Monthly": 1,
+                                  "Quarterly": 1,
+                                  "Semi-Annual": 1,
+                                  "Annual": 1
+                              }
+
+              Expected Output:
+
+              The output should tell me what the count was in each file you analyzed, for example:
+
+                              File: File Name,  File Name ...
+                              Stories: Count 1, Count 2 ...
+                              Maintenance: Count 1, Count 2 ...
+                              KRFCs (SOX Impact): Count 1, Count 2 ...
+                              Oracle Patches: Count 1, Count 2 ...
+                              Total: Sum of column, Sum of column
+                              Total Sum = Sum 1, Sum 2 ...
+
+              The sum must be calculated for all categories, and then frequency mapping and sample size mapping must be performed based on the total sum.
+
+              For example, if the total sum is 300, then the frequency is "Multiple Times Per Day" and the sample size is 20.
+              You can use the Advanced Data Analysis Tool to help you analyze the data and generate the result. The filenames should only include the name of the files, not the path
+
+              The final goal is to output a single number, representing the sample size for audit purposes, based on the analysis you conducted and the reasoning behind your decision.
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Sample Generation Agent
+        action_prototype_name: SupervisorAgent
+        order: 3
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: google_drive_mcp_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Instant
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: advanced_data_analysis_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Thinking
+          task_description:
+            value_type: primitive
+            value: |
+              You are a Sample Generation Agent,
+
+              Your Task:
+              1. Download the CO2TestWorksheetTemplate.xlsx using Google Drive.
+              2. Generate a sample of the size you calculated in the previous step and from the files you downloaded from the GHCO platform. You must refer the tickets mentioned in the spreadsheet, do not make up id, strictly refer to the data you collected from GHCO platform. You need to use the Advanced Data Analysis tool for this step. Make very detailed plan for Advanced Data Analysis agent as it can use that plan to fulfill your requirement.
+
+              **Decision Logic Based on Sample Size:**
+              - If sample size <= 3 rows: Generate ONLY a formatted text description with all sample rows (no Excel file needed)
+              - If sample size > 3 rows: Generate ONLY an Excel file (no text description needed)
+
+              When generating Excel file (sample size > 3), make sure the following key points are addressed:
+                - Output a Excel file that is edited from the template Excel file, since it has the correct formatting
+                - Make sure to keep the column name and the formatting of all the cells as appropriate
+                - Be careful that there may be multiple header rows
+                - Separate any working tables with the final output file, strictly follow the template file, do not add new sheets to the final output file
+                - Copy the style of the sample rows to all the new rows
+
+              When generating text description (sample size <= 3), format the text to match the structure in CO2TestWorksheetTemplate.xlsx:
+                Change Management Interim - Oracle ERP, Oracle EPM/ePBCS, DRM, and Mulesoft
+                Please provide supporting evidence for the selected sample:
+
+                [Use Advanced Data Analysis tool to read the template structure and format each sample row as text following the same column structure from the template. Present the data in a clear, readable text format that preserves all fields from the template.]
+
+              **Required Output:**
+              Always clearly state in your output:
+              - Sample size: [number]
+              - Output type: [TEXT_DESCRIPTION or EXCEL_FILE]
+              - If Excel: provide the full file path
+              - If Text: provide the complete formatted description
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Request Agent
+        action_prototype_name: SupervisorAgent
+        order: 4
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: browser_tool
+                  selected_model:
+                    value_type: primitive
+                    value: Gemini 2.5 Flash
+          task_description:
+            value_type: primitive
+            value: |
+              You are a GHCO Request Agent who creates audit requests for the business Unit.
+
+              Your tasks:
+              Create requests for one Business Unit and extract its tracking ID, and ensure the request is created successfully.
+              When creating requests:
+              - Use the provided template and fill in the software name dynamically
+              - Extract and record tracking IDs for each request
+              - Create requests for all software in the list
+
+              Steps to reach the I.T. Assessments page:
+              (1) The Home Page URL of the Application is https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx
+              (2) Navigate to the 'Filter' input field on the left.
+              (3) Input text 'I.T. Assessments (2022 - forward)' to the field 'Filter'.
+              (4) Click "I.T. Assessments (2022 - forward)" under "ITGC 2024"
+              Under the first column, Assessment of the table, you can find the clickable cells for different business units. The names are in <Year> (<Season>) - <Business Unit>
+              Find the one for the target business unit and click it.
+
+              After going into the specific page, there is a button Add New, click it to create a new request.
+
+              Click the Save button until the Tracking ID appears on the screen.
+              Record the Tracking ID.
+              You must find the tracking ID on the page.
+              After clicking the Save button, a Tracking ID will be generated, it is in the format REQ-xxxxxxx, where xxxxxxx is a series of numbers.
+
+              In case of an error, a pop-up will open mentioning missing data, fill it the data, and continue with the usual steps.
+
+              Tracking ID:
+
+
+              Expected Output: Output the Tracking ID from the application, outputted as REQ-xxxxxxx. Do not make up the ID if you can't find it; you can output that you are unable to find the ID.
+
+              After creating the request request pause. If you are resuming, assume that the task has already been completed. You must always create a request even if the existing request exists.
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Request Collection Agent
+        action_prototype_name: SupervisorAgent
+        order: 5
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: browser_tool
+                  selected_model:
+                    value_type: primitive
+                    value: Gemini 2.5 Flash
+          task_description:
+            value_type: primitive
+            value: |
+              You are a GHCO Request Collection Agent who downloads all evidence files uploaded to requests created by the GHCO Request Agent after sampling, regardless of the quantity.
+
+              Your tasks:
+
+              Navigate to the request using the tracking ID provided by the GHCO Request Agent. Here are the steps to find the old request:
+
+              Steps to Reach and Open the Request
+              1. Navigate to the 'Search' input field at the top; do not use the Filter.
+              2. Input text '[Tracking ID]' into the search; the tracking ID is a placeholder, the Tracking ID must be referenced from the Request Agent from the last step.
+              3. Click on the Tracking ID to open the request details page.
+              4. Read the request description and locate the section containing the evidence files (e.g., "interim evidence files" or equivalent attachment field).
+
+              Evidence File Download Plan (Mandatory Iterative Download)
+              1. Count Files: Create a list of all evidence files attached to the request and store them in a list(Names should match exactly as per file names; you are not allowed to change file names under any circumstances).
+              2. Execute Download Loop: Initiate a download process that continues until the count of remaining files to be downloaded is zero.
+              3. Loop Condition: While the number of files available for download is greater than zero:
+              4. Select the next available file from the list.
+              5. Download the file by clicking on the file to the local folder.
+              6. Verify the file has successfully saved and is complete.
+              7. Remove the downloaded file from the list of 'files to process' (or decrement the count).
+              8. Error Handling: Implement a retry mechanism within the loop for any file that fails to download or verify on the first attempt (retry up to 3 times per file).
+
+              You can stop if you cannot find the request using the provided Tracking ID on the specified page. Do not navigate to subsequent pages to search for the request.
+
+              Expected Output: Name of the files downloaded in a formatted manner.
+
+              Request a pause if you are unable to complete the download.
+
+              On Resume: If the history indicates that you were unable to download all files, you should retry downloading the files by creating a new plan until your goal is achieved.
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Change Ticket Auditor
+        action_prototype_name: SupervisorAgent
+        order: 6
+        control_variables:
+          tools:
+            value_type: array
+            value:
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: google_drive_mcp_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Instant
+              - value_type: object
+                value:
+                  tool_id:
+                    value_type: primitive
+                    value: advanced_data_analysis_tool
+                  selected_model:
+                    value_type: primitive
+                    value: GPT-5.1 Thinking
+          task_description:
+            value_type: primitive
+            value: |
+              You are a Change Ticket Auditor Agent.
+
+              In the previous step, you downloaded all the evidence files uploaded to the requests created by the GHCO Request Agent that uploaded all the evidence. In this agent, your task is to fill the spreadsheet.
+
+              While filling in the spreadsheet, you need to make sure of the following:
+
+                      1. Accuracy: Ensure that the data you enter is accurate and corresponds to the evidence request; at no point should you fabricate data at any step.
+                      2. Completeness: Make sure to fill in all the required fields in the spreadsheet. If certain information is not available, leave the field blank rather than guessing or making assumptions or type N/A.
+                      3. The spreadsheet should be filled in a structured format, with each piece of information in its designated column.
+                      4. A sample spreadsheet will be provided to you; you must follow the same format as the sample spreadsheet and must output only the filled spreadsheet.
+                      5. You must also generate a separate detailed report of the data you entered in the spreadsheet, explaining how you obtained each piece of information and each reference to the evidence request.
+
+                      More Context on spreadsheet:
+
+                      The spreadsheet has the following columns:
+
+                      Index: The index of the row.
+                      Change Ticket ID: The unique identifier for the change ticket.
+                      Change Type: The type of change (Story, Maintenance, Patch)
+                      System Impacted: The system that is impacted by the change.
+                      Description of Change: A brief description of the change.
+
+                      The above data is already provided to you in the request description. You need to fill in the following columns:
+
+                      Developer: Who the developer was for this ticket, Assignee is Developer
+                      Change Tester: If the status of the ticket was changed, who changed it.
+                      Testing Date: The date when the change was tested.
+                      Testing Environment: The environment where the change was tested.
+                      Evidence of Testing: Yes/No if evidence of testing is available.
+                      Approver: Who approved the change before putting the change in production.
+
+                      The change ticket refers release ticket, and sometimes you need to refer release ticket to get the information.
+
+                      You must use the advanced_data_analysis_tool to analyze the files and fill in the spreadsheet data, and output the result as a one single spreadsheet file in .xlsx format, and use Google Drive MCP only to get the template file  'CO2 Test WorksheetFullTemplate.xlsx' that will help you to follow a strict format.
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+
+    entities:
+      - name: "test"
+        credentials:
+          - credential_name: GHCO-User-1
+          - credential_name: Auditor-Google-Token
+        independent_variables:
+          - additional_description: |-
+              Make sure all the information is filled correctly before you click the Save button; otherwise, the request will not be created successfully (Add New Request will stay on page), and a pop-up will show the error message.
+
+                Template for giving browser_agent a task:
+                    <template>
+                    Home page: "https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx"
+                    Target Business Unit: "2025 Q4 Cable Division: Cable ONE"
+                    Fill the form with the following 6 entries:
+                    {{
+                        "*Test Period": "Interim"
+                        "Control Area": "CO2* - Operational Change Control"
+                        "Request Description":
+                        "Change Management - DRM, Mulesoft, Oracle ERP, Oracle EPM/ePBCS/PCMCS Application, Database, and Operating System
+                        Provide a listing of all changes implemented from KFCS (KSS Jira project) from 1/1/2024 through 5/31/2024
+                        Note:
+                        1) Included the supporting infrastructure (i.e., operating system and databases) changes
+                        2) Capture screenshots of the commands/scripts used, as well as the system from which this listing is generated."
+                        "Date Due": <Two weeks from today (dates are usually in MM/DD/YYYY format)>
+                        "Requested by": "agent, AI Auditor" (You need to search the name using the UI, click on Search before selecting the name)
+                        "BU Contact(s)": "agent, AI BU" (You need to search the name using the UI, click on Save before selecting the name)
+                    }}
+                    </template>
+
+              If resuming and you were unable to perform your task, revisit your plan and try again.
+          - additional_description: |-
+              Home Page: https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx
+              Target Business Unit: 2025 Q4 Cable Division: Cable ONE
+              The tracking ID should be referred from the Request Agent.
+
+          - additional_description: ""
+          - additional_description: ""
+          - additional_description: |-
+              Make sure all the information is filled correctly before you click the Save button; otherwise, the request will not be created successfully, and a pop-up will show the error message.
+
+              When creating the request, check the "Output type" from the Sample Generation Agent output:
+              - If Output type = TEXT_DESCRIPTION: Write the text directly in Request Description field (no file upload)
+              - If Output type = EXCEL_FILE: Write brief description and upload the Excel file as Interim Evidence
+
+                    Template for giving browser_agent a task when Output type is TEXT_DESCRIPTION:
+                        <template>
+                        Home page: "https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx"
+                        Target Business Unit: "2025 Q4 Cable Division: Cable ONE"
+                        Fill the form with the following 6 entries:
+                        {{
+                            "Test Period": "Interim" Note: Only select Interim from multi-select options.
+                            "Control Area": "CO2* - Operational Change Control"
+                            "Evidence Type": "Change Sample"
+                            "Request Description": "[Use the complete formatted description from the Sample Generation Agent output]"
+                            "Date Due": <One week from today, dates are usually in MM/DD/YYYY format>
+                            "Requested by": "agent, AI Auditor" (You need to search the name using the UI, click on Search before selecting the name)
+                            "BU Contact(s)": "agent, AI BU" (You need to search the name using the UI, click on Save before selecting the name)
+                        }}
+                        Click Save button.
+                        Upon successful save, Tracking ID would be shown on the page, write it down.
+                        </template>
+
+                    Template for giving browser_agent a task when Output type is EXCEL_FILE:
+                        <template>
+                        Home page: "https://ghco-dev.archerirm.us/apps/ArcherApp/Home.aspx"
+                        Target Business Unit: "2025 Q4 Cable Division: Cable ONE"
+                        Fill the form with the following 6 entries:
+                        {{
+                            "Test Period": "Interim" Note: Only select Interim from multi-select options.
+                            "Control Area": "CO2* - Operational Change Control"
+                            "Evidence Type": "Change Sample"
+                            "Request Description": "Change Management Interim - Oracle ERP, Oracle EPM/ePBCS, DRM, and Mulesoft. Please provide supporting evidence for the selected sample. See attached Excel file for detailed sample selections."
+                            "Date Due": <One week from today, dates are usually in MM/DD/YYYY format>
+                            "Requested by": "agent, AI Auditor" (You need to search the name using the UI, click on Search before selecting the name)
+                            "BU Contact(s)": "agent, AI BU" (You need to search the name using the UI, click on Save before selecting the name)
+                        }}
+                        Upload the Excel file from the path provided by the Sample Generation Agent as Interim Evidence.
+                        Click Save button.
+                        Upon successful save, Tracking ID would be shown on the page, write it down.
+                        </template>
+              If resuming and you were unable to extract or create a request you will need to retry as you can't perform next task without the Tracking ID
+          - additional_description: ""
+          - additional_description: ""

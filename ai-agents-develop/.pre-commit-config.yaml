@@ -1,0 +1,48 @@
+repos:
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v2.3.0
+      hooks:
+          - id: end-of-file-fixer
+            exclude: "(^|/)PoC/|^PoC-frontend/|^Mock-control-plane/"
+          - id: trailing-whitespace
+            exclude: "(^|/)PoC/|^PoC-frontend/|^Mock-control-plane/"
+          - id: pretty-format-json
+            args:
+                - "--autofix"
+                - "--indent=4"
+                - "--no-sort-keys"
+            exclude_types: [jupyter]
+            exclude: "(^|/)PoC/|^PoC-frontend/|^Mock-control-plane/"
+    - repo: https://github.com/psf/black
+      rev: 25.9.0
+      hooks:
+          - id: black
+            exclude: "(^|/)PoC/|^PoC-frontend/|^Mock-control-plane/"
+    - repo: https://github.com/PyCQA/autoflake
+      rev: v2.2.1
+      hooks:
+          - id: autoflake
+            args: [--remove-all-unused-imports, --in-place]
+            exclude: "(^|/)PoC/|^PoC-frontend/|^Mock-control-plane/"
+    - repo: https://github.com/pre-commit/mirrors-mypy
+      rev: "v1.11.2"
+      hooks:
+          - id: mypy
+            additional_dependencies:
+                - "types-requests<2.31.0.7"
+                - "types-PyYAML"
+                - "types-python-dateutil"
+            exclude: "(^|/)PoC/|^PoC-frontend/|^Mock-control-plane/|^app/core/agents/action_prototype/GHCO_auditor/tools/scripts_template/"
+    - repo: https://github.com/pycqa/isort
+      rev: 5.12.0
+      hooks:
+          - id: isort
+            args: ["--profile=black"]
+            exclude: "^PoC-frontend/"
+    - repo: https://github.com/astral-sh/uv-pre-commit
+      rev: 0.6.16
+      hooks:
+          - id: pip-compile
+            language_version: python3.11
+            args: [pyproject.toml, -o, requirements.txt, --universal, --extra=service]
+            exclude: "(^|/)PoC/|^PoC-frontend/|^Mock-control-plane/"

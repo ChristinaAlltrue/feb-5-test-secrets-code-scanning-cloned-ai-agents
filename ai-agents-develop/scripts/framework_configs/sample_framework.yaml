@@ -1,0 +1,65 @@
+framework_id: SAMPLE
+framework_name: SAMPLE Framework
+framework_description: |
+  Compliance automation for SAMPLE process validation.
+
+execution:
+  auto_create: true
+  name: Initial Control Group Execution
+  type: On Demand
+
+controls:
+  - name: Supervisor - Two Actions
+    instructions: |
+      **SKIP COMPLIANCE CHECK**
+      Execute two supervisor agent actions in sequence.
+
+      Action 1: Check if there are any emails related to REQ-3114054.
+      Action 2: Send the findings from Action 1 to shaw@alltrue.ai.
+    action_list:
+      - action_name: Search Emails for REQ-3114054
+        action_prototype_name: SupervisorAgent
+        order: 0
+        category: Supervisor
+        control_variables:
+          tools:
+            value_type: primitive
+            value:
+              - generic_gmail_agent_tool
+          task_description:
+            value_type: primitive
+            value: "Check if there are any emails related to REQ-3114054"
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Check if there are any emails related to REQ-3114054"
+              description: Primary task description for the supervisor agent
+
+      - action_name: Send Findings to shaw@alltrue.ai
+        action_prototype_name: SupervisorAgent
+        order: 1
+        category: Supervisor
+        # reference_variables:
+        #   previous_result:
+        #     value_type: ref
+        #     action_index: 0
+        #     field: output
+        control_variables:
+          task_description:
+            value_type: primitive
+            value: "Check if there are any emails related to REQ-3114054"
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Send the results of Action 1 to shaw@alltrue.ai"
+              description: Supervisor instruction for forwarding results
+
+    entities:
+      - name: "Do Nothing"
+        independent_variables:
+          - additional_description: ""
+          - additional_description: ""

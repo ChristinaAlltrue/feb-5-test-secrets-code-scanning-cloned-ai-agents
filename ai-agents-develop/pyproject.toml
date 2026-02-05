@@ -1,0 +1,73 @@
+[project]
+name = "ai-agents"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "openpyxl>=3.1.5",
+    "pandas>=2.3.2",
+    "openpyxl>=3.1.0",
+    "pydantic>=2.10.6",
+    "fakeredis>=2.31.3",
+    "pyyaml>=6.0.2",
+    "faker>=37.12.0",
+    "psutil>=7.0.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["ai_agents*"]
+
+[tool.mypy]
+exclude = "^PoC/|^Mock-control-plane"
+
+[tool.logfire]
+ignore_no_config = true
+
+[tool.uv.sources]
+alltrue = { git = "ssh://git@github.com/AllTrue-ai/ai-security-python-api.git", rev = "v0.13.91" }
+
+[project.optional-dependencies]
+service = [
+    "fastapi[standard]>=0.115.12",
+    "logfire[fastapi,httpx,requests,sqlalchemy]>=3.14.0",
+    "opentelemetry-instrumentation-asgi>=0.53b1",
+    "pydantic>=2.10.6",
+    "sqlalchemy[asyncio]>=2.0.40",
+    "sqlalchemy-orm>=1.2.10",
+    "sqlalchemy-utils>=0.41.2",
+    "psycopg[binary]>=3.2.6",
+    "browser-use~=0.9",
+    "pytesseract>=0.3.13",
+    "pyotp>=2.9.0",
+    "pyzbar>=0.1.9",
+    "playwright>=1.52.0",
+    "opencv-python>=4.11.0.86",
+    "alltrue",
+    "pydantic-graph>=0.2.16",
+    "pydantic-ai-slim[logfire,openai,mcp,evals]>=1.0",
+    "openai",
+    "sqlmodel>=0.0.24",
+    "redis>=6.2.3",
+    "types-redis>=4.6.0.20241004",
+    "aiosqlite>=0.21.0",
+    "apscheduler~=3.11", # 4.0 is not stable
+    "authlib>=1.6.5", # Critical Vulnerabilities Detected by Trivy
+    "pypdf>=6.4.0"
+]
+dev = [
+    "asgi-lifespan>=2.1.0",
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.26.0",
+    "pytest-cov>=6.1.1",
+    "pytest-mock>=3.14.0",
+    "pytest-xdist>=3.6.1",
+    "starlette>=0.46.2",
+    "streamlit",
+    "watchdog",
+]
+client = [
+    "alltrue",
+    "httpx>=0.28.1",
+]

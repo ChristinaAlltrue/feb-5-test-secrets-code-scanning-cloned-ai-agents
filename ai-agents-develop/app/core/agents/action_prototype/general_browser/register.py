@@ -1,0 +1,36 @@
+from alltrue.agents.schema.action_prototype import (
+    ActionPrototype,
+    ActionType,
+    AgentActionCategory,
+    extract_deps_schema_from_model,
+    extract_output_schema_from_model,
+)
+
+from app.core.agents.action_prototype.bundles import ActionPrototypeBundle
+from app.core.agents.action_prototype.general_browser.action import GeneralBrowser
+from app.core.agents.action_prototype.general_browser.schema import (
+    GeneralBrowserDeps,
+    GeneralBrowserOutput,
+)
+
+NODE_NAME = "general_browser"
+
+prototype = ActionPrototype(
+    name=NODE_NAME,
+    type=ActionType.BROWSER,
+    description="Navigate to a URL and perform actions based on human instructions",
+    category=AgentActionCategory.TOOLS,
+    deps_schema=extract_deps_schema_from_model(GeneralBrowserDeps),
+    output_schema=extract_output_schema_from_model(GeneralBrowserOutput),
+)
+
+
+general_browser_bundle = ActionPrototypeBundle(
+    name=NODE_NAME,
+    prototype=prototype,
+    deps_model=GeneralBrowserDeps,
+    output_model=GeneralBrowserOutput,
+    logic_cls=GeneralBrowser,
+)
+
+general_browser_bundle.register()

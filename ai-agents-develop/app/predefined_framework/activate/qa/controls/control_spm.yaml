@@ -1,0 +1,63 @@
+control_name: SPM
+control_description: This is a qa control with browser
+action_instances:
+  - action_prototype_name: START
+    order: 0
+
+  - action_prototype_name: GenericAuditorAgent
+    order: 1
+    control_variables: {}
+    reference_variables: {}
+    independent_variables:
+      user_prompt:
+        value_type: args
+        args_schema:
+          type: string
+          example: "I want you to login the accaount first. Open the AI SPM feature in the left menu and wait for the page to load. Next click the Pentests tab in the top menu. The first row in the table should be for OpenAI API Key (Douglas Resource OPEN AI API). Click the Download Report button on the right of this row and then click Complete. Wait for the file to download. Use the processing file tool to open the file and verify that the cover letter on page 3 of the file is signed by Ury Segal. If the cover letter is signed by Ury Segal, consider the check passed, otherwise consider it failed."
+          description: The user prompt the agent needs to do for the website
+      login_url:
+        value_type: args
+        args_schema:
+          type: string
+          example: "https://playground.alltrue-be.com/"
+          description: The url to login with
+      username:
+        value_type: args
+        args_schema:
+          type: string
+          example: "abc@gmail.com"
+          description: The username to login with
+      password:
+        value_type: args
+        args_schema:
+          type: string
+          example: "123!"
+          description: The password to login with
+      mfa_secret:
+        value_type: args
+        args_schema:
+          type: string
+          example: ""
+          description: The MFA secret to login with
+      login_instructions:
+        value_type: args
+        args_schema:
+          type: string
+          example: "Type the username in the `email address` section. After that, type the password and click the `continue`. After that, wait until the full page is loaded. If the login is successful even Browser is closed or disconnected. Just set the `successful_login` to yes in the output."
+          description: The instructions to login with
+      screenshot_target_information:
+        value_type: args
+        args_schema:
+          type: string
+          example: ""
+          description: The target to be taken screeshot of
+      page_audit_check_information:
+        value_type: args
+        args_schema:
+          type: string
+          example: ""
+          description: The information to be checked on the page audit
+
+edges:
+  - source: 0
+    target: 1

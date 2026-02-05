@@ -1,0 +1,65 @@
+control_name: control_demo_browser
+control_description: This is a demo control with browser
+action_instances:
+  - action_prototype_name: START
+    order: 0
+
+  - action_prototype_name: login
+    order: 1
+    control_variables: {}
+    reference_variables: {}
+    independent_variables:
+      initial_url:
+        value_type: args
+        args_schema:
+          type: string
+          example: "https://www.google.com"
+          description: The initial URL to navigate to
+      username:
+        value_type: args
+        args_schema:
+          type: string
+          example: "admin"
+          description: The username to login with
+      password:
+        value_type: args
+        args_schema:
+          type: string
+          example: "password"
+          description: The password to login with
+      mfa_secret:
+        value_type: args
+        args_schema:
+          type: string
+          example: "1234567890"
+          description: The MFA secret to login with
+      instructions:
+        value_type: args
+        args_schema:
+          type: string
+          example: "Login to the system"
+          description: The instructions to login with
+
+  - action_prototype_name: navigation
+    order: 2
+    control_variables: {}
+    reference_variables: {}
+    independent_variables:
+      instructions:
+        value_type: args
+        args_schema:
+          type: string
+          example: "Navigate to the home page"
+          description: The instructions to navigate to the home page
+      goal:
+        value_type: args
+        args_schema:
+          type: string
+          example: "Navigate to the home page"
+          description: The goal to navigate to the home page
+
+edges:
+  - source: 0
+    target: 1
+  - source: 1
+    target: 2

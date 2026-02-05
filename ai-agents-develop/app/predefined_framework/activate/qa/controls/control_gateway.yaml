@@ -1,0 +1,63 @@
+control_name: Gateway
+control_description: This is a qa control with browser
+action_instances:
+  - action_prototype_name: START
+    order: 0
+
+  - action_prototype_name: GenericAuditorAgent
+    order: 1
+    control_variables: {}
+    reference_variables: {}
+    independent_variables:
+      user_prompt:
+        value_type: args
+        args_schema:
+          type: string
+          example: "Log into the website. Navigate to the left menu and click on AI Inventory. Then you need to go to the top navigation bar and click on Technologies. Unclick the Group by Technology toggle. In the Search Resources box, type 'OpenAI API Key (Christina Test Proxy)'. Click the row for this resource. After that, click the button 'Gateway Policies'. After it, scroll down to the policy named 'SQL Injection', if it is not turned on, toggle it on. Then expand it, set 'Input Rule Action' to 'Block', and 'Issue Severity' to 'Low'. Scroll up and click 'View Pending Policy Changes', then apply the changes and wait for the confirmation message 'Changes applied successfully'. Proceed to https://chatbot.playground.alltrue-be.com/Basic_Chat_Bot, enable 'Use Proxy'.Proceed to https://chatbot.playground.alltrue-be.com/Basic_Chat_Bot, enable 'Use Proxy', delete all text in 'OpenAI API Base URL', and then and input 'https://api.42072582.staging.alltrue-be.com/openai/v1' for 'OpenAI API Base URL' and 'Christina Test Proxy' for 'Endpoint Identifier'. Type SQL injection code \";SELECT IF(SUBSTRING(password,1,1) = 'a', SLEEP(10),'false') FROM users WHERE username = 'admin';\" and then type Enter to test the rule. Verify the chatbot replies with 'Blocked: SQL Injection detected in input'. Wait for synchronization and go to https://staging.alltrue-be.com/ai-gateway/issues?organization=06dbbcc3-e4e8-4e0b-82c5-610504d0e8ac&project=7aa08729-6034-47cc-8226-bb47d9bd454b to verify the generated issue with specified fields. Take a screenshot of the verification results."
+          description: The user prompt the agent needs to do for the website
+      login_url:
+        value_type: args
+        args_schema:
+          type: string
+          example: "https://staging.alltrue-be.com/"
+          description: The url to login with
+      username:
+        value_type: args
+        args_schema:
+          type: string
+          example: "abc@alltrue.ai"
+          description: The username to login with
+      password:
+        value_type: args
+        args_schema:
+          type: string
+          example: "123"
+          description: The password to login with
+      mfa_secret:
+        value_type: args
+        args_schema:
+          type: string
+          example: "KCC6-2Q3A-4Z5B-6X7Y"
+          description: The MFA secret to login with
+      login_instructions:
+        value_type: args
+        args_schema:
+          type: string
+          example: "put the username in the username field and password in the password field, then you need to input the one time password from MFA, after that, click the Continue button."
+          description: The instructions to login with
+      screenshot_target_information:
+        value_type: args
+        args_schema:
+          type: string
+          example: "Capture a screenshot of the verification results showing that the chatbot replies with 'Blocked: SQL Injection detected in input' and the issue appears in the list with the specified fields on the issues page."
+          description: The target to be taken screeshot of
+      page_audit_check_information:
+        value_type: args
+        args_schema:
+          type: string
+          example: "Check if the chatbot replies with 'Blocked: SQL Injection detected in input' and verify that an issue with the specified fields appears in the issues list on the given URL."
+          description: The information to be checked on the page audit
+
+edges:
+  - source: 0
+    target: 1

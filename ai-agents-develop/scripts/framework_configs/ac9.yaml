@@ -1,0 +1,127 @@
+framework_id: AC9-8
+framework_name: AC9 Framework
+framework_description: |
+  Compliance automation for AC9 process validation.
+
+
+execution:
+  auto_create: true
+  name: Initial Control Group Execution
+  type: On Demand
+
+
+controls:
+  - name: 2025 Oct
+    instructions: |
+      **SKIP COMPLIANCE CHECK**
+
+
+    action_list:
+      - action_name: Request Collection Agent
+        action_prototype_name: SupervisorAgent
+        order: 0
+        control_variables:
+          tools:
+            value_type: primitive
+            value:
+              - browser_tool
+          task_description:
+            value_type: primitive
+            value: "Check if there are any emails related to REQ-3114054"
+        # independent_variable_schema:
+        #   additional_description:
+        #     value_type: args
+        #     args_schema:
+        #       type: string
+        #       example: "Check if there are any emails related to REQ-3114054"
+        #       description: Primary task description for the supervisor agent
+
+      - action_name: Administrator Auditor
+        action_prototype_name: SupervisorAgent
+        order: 1
+        control_variables:
+          tools:
+            value_type: primitive
+            value:
+              - advanced_data_analysis_tool
+              - google_drive_mcp_tool
+          task_description:
+            value_type: primitive
+            value: "Check if there are any emails related to REQ-3114054"
+        # independent_variable_schema:
+        #   additional_description:
+        #     value_type: args
+        #     args_schema:
+        #       type: string
+        #       example: "Check if there are any emails related to REQ-3114054"
+        #       description: Primary task description for the supervisor agent
+
+      - action_name: Request Agent
+        action_prototype_name: SupervisorAgent
+        order: 2
+        control_variables:
+          tools:
+            value_type: primitive
+            value:
+              - browser_tool
+          task_description:
+            value_type: primitive
+            value: "Check if there are any emails related to REQ-3114054"
+        # independent_variable_schema:
+        #   additional_description:
+        #     value_type: args
+        #     args_schema:
+        #       type: string
+        #       example: "Check if there are any emails related to REQ-3114054"
+        #       description: Primary task description for the supervisor agent
+
+      - action_name: Get Response Agent
+        action_prototype_name: SupervisorAgent
+        order: 3
+        control_variables:
+          tools:
+            value_type: primitive
+            value:
+              - browser_tool
+          task_description:
+            value_type: primitive
+            value: "Check if there are any emails related to REQ-3114054"
+        # independent_variable_schema:
+        #   additional_description:
+        #     value_type: args
+        #     args_schema:
+        #       type: string
+        #       example: "Check if there are any emails related to REQ-3114054"
+        #       description: Primary task description for the supervisor agent
+
+      - action_name: Administrator Access Auditor
+        action_prototype_name: SupervisorAgent
+        order: 4
+        control_variables:
+          tools:
+            value_type: primitive
+            value:
+              - advanced_data_analysis_tool
+              - google_drive_mcp_tool
+          task_description:
+            value_type: primitive
+            value: "Check if there are any emails related to REQ-3114054"
+        # independent_variable_schema:
+        #   additional_description:
+        #     value_type: args
+        #     args_schema:
+        #       type: string
+        #       example: "Check if there are any emails related to REQ-3114054"
+        #       description: Primary task description for the supervisor agent
+    entities:
+      - name: "Testing"
+        independent_variables:
+          - {}
+          - {}
+          - {}
+          - {}
+          - {}
+            # additional_description: ""
+          # - task_description: |
+          #     Do nothing
+          #   additional_description: ""

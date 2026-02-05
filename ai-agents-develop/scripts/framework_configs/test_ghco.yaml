@@ -1,0 +1,259 @@
+framework_id: SOX-SUB-1
+framework_name: SOX SUB Framework 1
+framework_description: Auditing for GHCO.
+
+execution:
+  auto_create: true
+  name: 2025 Oct
+  type: On Demand
+
+controls:
+  - name: AC9 Code Interpreter Testing
+    instructions: |
+      Examine the evidence files and update the AC9 testing workbook as per the provided template and instructions.
+
+    action_list:
+      - action_name: Prepare Files
+        action_prototype_name: SupervisorAgent
+        order: 0
+        control_variables:
+          tools:
+            value_type: primitive
+            value:
+              - google_drive_mcp_tool
+          task_description:
+            value_type: primitive
+            value: |
+              Download AC9 Template Spreadsheet from Google with id: 1HmuxPO0yxT53SwITaBhWnuSsWY_FWlmJ
+
+              I have prepared all the files you will need for this task in a Google Drive folder. You can find in the folder with id: 1PIJ_1JR_Jbq5JGX4i9VDAPicE-aJTg8R, download all the files in the folder.
+
+              Google token: {"token": "ya29.a0AQQ_BDRDJqd61z9x9BYtRt-2K6xVevtNx4h0fOzqmVNcP1OyC1jspe4bG47T7F4FHbYuT2KppT2TgMN1YW2sDZ0gicpSoa_dQ6Y5reGb3b-5IVZOFMCtC2cx49CQ0unkIJkwY869IVfMu2KSTlS5F_1br2mfFFYlO8NWbmTlhflSXAwthtfc1y7wcEIFuSlN1NO9fZQaCgYKAS0SARMSFQHGX2MicuYeQlatb19qxsldUmD5lQ0206", "refresh_token": "1//06xkteEm7bKz9CgYIARAAGAYSNwF-L9IrarZzXtBYChhd4-9ysfYnysMSS6SnzCkD0SJLqmpx2pAEQD9myUpaARh3ifCbzyzIPWg", "token_uri": "https://oauth2.googleapis.com/token", "client_id": "256180252332-lmi76ahdrch1junvlrf1l6876eevagad.apps.googleusercontent.com", "client_secret": "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", "scopes": ["https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/gmail.modify", "https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/spreadsheets"], "universe_domain": "googleapis.com", "account": "", "expiry": "2025-09-19T20:13:14Z"}
+
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      - action_name: Administrator Auditor
+        action_prototype_name: SupervisorAgent
+        order: 1
+        control_variables:
+          tools:
+            value_type: primitive
+            value:
+              - advanced_data_analysis_tool
+          task_description:
+            value_type: primitive
+            value: |
+              You should follow the template below to give advanced_data_analysis_tool a clear task:
+              <task template>
+                AC9 Admin Access Testing
+
+                Goal
+                - Update last year's AC9 testing workbook using this year's Archer exports.
+                - Preserve template structure/formatting. Append new rows only. No new sheets.
+
+                Inputs
+                - Application User List (users/roles)
+                - Admin Roles Definition
+                - Database User List or SQL role export
+                - Operating System Admin List (server local Admins)
+                - Active Directory Group Memberships
+                - Developer List (or “no developers” statement)
+                - Employee List/Org Chart
+                - Template Spreadsheet (last year's AC9 workbook)
+
+                Outputs
+                - Updated AC9 workbook (same two tabs only: “AC9” and “AC9 - Generic Accts”), with:
+                  - AC9 (people-only consolidated admin table)
+                  - AC9 - Generic Accts (all accounts including service/built-in)
+                  - Notes appended at the bottom of AC9
+                - Follow-up questions text for Archer
+
+                Golden Rules (must follow)
+                - Template integrity:
+                  - Do not add, delete, or move sheets.
+                  - Do not change or un/merge header cells.
+                  - Append rows only at the bottom of each section; never insert into existing data blocks.
+                  - Copy style from the last existing data row in that section for all new rows.
+                - Column discipline:
+                  - Keep Job Role in Job Role column; Auditor Comments in Auditor Comments column.
+                  - Do not repurpose columns.
+                - Built-in system admins:
+                  - Databases: If present, include NT AUTHORITY\SYSTEM, BUILTIN\Administrators, NT SERVICE\MSSQLSERVER, NT SERVICE\SQLSERVERAGENT, NT SERVICE\SQLWriter, NT SERVICE\Winmgmt (and any other NT SERVICE admins) in “AC9 - Generic Accts > Databases”.
+                  - Mark Admin=Yes if they have elevated roles; Interactive=No unless evidence states otherwise; explain as “built-in/non-interactive.”
+                  - They belong in Generic Accts, not in AC9 (people tab), and are not propagated unless confirmed interactive with named individuals.
+                - Service account propagation:
+                  - Propagate to people only when the service account is interactive AND named individuals are confirmed as having access.
+                  - If unknown, document in Generic Accts, mark “Interactive: Unknown,” and add a follow-up; do not propagate.
+                - Year-over-year:
+                  - Initially highlight all existing rows; unhighlight as you confirm each user this year.
+                  - Keep highlighted rows that are not present this year (removed users).
+                - Notes location:
+                  - Place Notes at the bottom of AC9 only, below the last data row, leaving a blank spacer row. Do not overwrite merged areas.
+
+                Step-by-step
+
+                1) Application administrators
+                - Read Admin Roles Definition; identify admin criteria (e.g., Superuser = TRUE).
+                - Filter Application User List on that criteria.
+                - Split into people vs service accounts (prefixes like SVC_, API_, GMG_, SQL_, WO_ or non-name patterns).
+                - People → AC9 tab (App Admin = X).
+                - Service accounts → AC9 - Generic Accts (Application section), with Admin=Yes/No, Interactive?, Explanation, Owner, Approved users, Comments.
+                - Add vendor note for WO_ accounts in Auditor Comments on AC9; vendors won't be in employee list.
+
+                2) Database administrators
+                - Include built-ins and NT SERVICE/NT AUTHORITY/BUILTIN admins in Generic Accts (Databases) as non-interactive (unless evidence).
+                - Identify domain/service accounts; split people vs service/built-ins.
+                - People → AC9 (DB Admin = X). Service/built-in → Generic Accts (Databases) with explanations.
+
+                3) Operating system administrators
+                - From OS Admin lists, capture local Administrators for in-scope servers.
+                - Expand any AD groups via the AD Group Membership export; list individual members and note group source in Server/Group.
+                - Domain Admins implies OS admin everywhere; note “Domain Admins” in Server/Group.
+                - People → AC9. Service/generic/local technical accounts → Generic Accts (OS).
+
+                4) Consolidate to AC9 (people-only)
+                - Start with last year's AC9:
+                  - Highlight all existing rows.
+                  - Unhighlight when matched in current data.
+                - One row per person; mark X for App/DB/OS/Domain Admin.
+                - Server/Group: include server names and AD groups; use “All servers” for Domain Admins.
+                - Deduplicate by User ID; combine groups/servers in the same row.
+
+                5) Developers
+                - If developer list provided, mark “Is this person a developer?” = X for matches.
+                - Any Admin + Developer = VIOLATION; note in Auditor Comments.
+                - If “no developers,” add that statement to Notes.
+
+                6) Job roles (AC9)
+                - Look up in the Employee List; fill Job Role as “Job Title - Department.”
+                - If vendor or not found, note accordingly in Job Role and Auditor Comments.
+
+                7) Service accounts (Generic Accts)
+                - Application, Databases, Operating Systems sections:
+                  - Include all service and built-in accounts (explicitly list NT/BUILTIN principals in Databases).
+                  - Fill Admin privilege, Interactive?, Explanation, Business Owner, Individuals approved, Auditor Comments.
+                  - Only propagate to AC9 if interactive + named individuals confirmed.
+                - Mark new vs existing; keep year-over-year notes.
+
+                8) SOD review (AC9 after propagation)
+                - Flag:
+                  - App + DB
+                  - App + OS
+                  - DB + OS
+                  - Any admin + Developer (VIOLATION)
+                  - All three (App + DB + OS) = high concern
+                - Put concise notes in Auditor Comments (e.g., “SOD: App + DB admin”; “Has access to SA service account”).
+
+                9) Notes (append at bottom of AC9)
+                - Notes from previous follow-up request that explain why a user's access is valid
+                - Admin Role Definitions
+
+                Formatting and QA safeguards
+                - Append-only: add new rows after last data row; do not insert into existing data blocks.
+                - Style copy: copy the last original data row (not header row) style for every new row; do not touch header merges.
+                - Column mapping: use fixed column indices by header labels; never write Job Role into Auditor Comments.
+                - Validation before save:
+                  - Sheet names unchanged; merged ranges unchanged.
+                  - Column widths and header rows unchanged.
+                  - Counts: rows added/updated; change log for audit trail.
+
+                Follow-up request (Archer) - structure
+                - Start: “Questions around service accounts:”
+                - Numbered questions; bullets for sub-questions.
+                - Group “who has access” items together at the end.
+                - Quote last year's documentation when verifying.
+                - Ask if interactive and who can use it for each new/changed service account.
+                - Request full membership for key AD groups (Domain Admins, SCCM Admins, etc.) if needed for OS admin expansion.
+
+                <Any information that is useful for the task>
+              </task template>
+              No need to pass full path in the prompt
+
+        independent_variable_schema:
+          additional_description:
+            value_type: args
+            args_schema:
+              type: string
+              example: "Today is ..."
+              description: Primary task description for the supervisor agent
+
+      # - action_name: Request Agent
+      #   action_prototype_name: SupervisorAgent
+      #   order: 3
+      #   control_variables:
+      #     tools:
+      #       value_type: primitive
+      #       value:
+      #         - browser_tool
+      #     task_description:
+      #       value_type: primitive
+      #       value: "You are ..."
+      #   # independent_variable_schema:
+      #   #   additional_description:
+      #   #     value_type: args
+      #   #     args_schema:
+      #   #       type: string
+      #   #       example: "Today is ..."
+      #   #       description: Primary task description for the supervisor agent
+
+      # - action_name: Get Response Agent
+      #   action_prototype_name: SupervisorAgent
+      #   order: 4
+      #   control_variables:
+      #     tools:
+      #       value_type: primitive
+      #       value:
+      #         - browser_tool
+      #     task_description:
+      #       value_type: primitive
+      #       value: "You are ..."
+      #   # independent_variable_schema:
+      #   #   additional_description:
+      #   #     value_type: args
+      #   #     args_schema:
+      #   #       type: string
+      #   #       example: "Today is ..."
+      #   #       description: Primary task description for the supervisor agent
+
+      # - action_name: Administrator Access Auditor
+      #   action_prototype_name: SupervisorAgent
+      #   order: 5
+      #   control_variables:
+      #     tools:
+      #       value_type: primitive
+      #       value:
+      #         - advanced_data_analysis_tool
+      #         - google_drive_mcp_tool
+      #     task_description:
+      #       value_type: primitive
+      #       value: "You are ..."
+      #   # independent_variable_schema:
+      #   #   additional_description:
+      #   #     value_type: args
+      #   #     args_schema:
+      #   #       type: string
+      #   #       example: "Today is ..."
+      #   #       description: Primary task description for the supervisor agent
+    entities:
+      - name: "Test"
+        independent_variables:
+          - additional_description: |
+              Developer:
+              Please provide a list of all developers for each in-scope system
+
+              Update/Remediation Comments:
+              GMG does not have access to source code for any in-scope SOX systems.
+
+
+              Admin definition:
+              Wide Orbit Admin - Superuser = TRUE
+          - additional_description: ""
+          # - {}
+          # - {}
+          # - {}

@@ -1,0 +1,6 @@
+framework_name: eu_act
+framework_description: eu_act_framework
+logo_url: https://cdn.britannica.com/66/96866-050-BBAE91CE/Flag-European-Union.jpg
+controls:
+  - !include controls/control_demo.yaml
+  - !include controls/control_demo_browser.yaml

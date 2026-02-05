@@ -1,0 +1,63 @@
+control_name: AI Inventory
+control_description: This is a qa control with browser
+action_instances:
+  - action_prototype_name: START
+    order: 0
+
+  - action_prototype_name: GenericAuditorAgent
+    order: 1
+    control_variables: {}
+    reference_variables: {}
+    independent_variables:
+      user_prompt:
+        value_type: args
+        args_schema:
+          type: string
+          example: "I want you to login the website first. Click AI Inventory in the left menu. In the AI Asset Landscape card, there should be a row that says a number and below it the text 'AI Resources'; click this. In the search resources bar, search the text 'credit_defaults_model'. Verify the information and take a screenshot as proof."
+          description: The user prompt the agent needs to do for the website
+      login_url:
+        value_type: args
+        args_schema:
+          type: string
+          example: "https://prod.alltrue-be.com/"
+          description: The url to login with
+      username:
+        value_type: args
+        args_schema:
+          type: string
+          example: "test@gmail.com"
+          description: The username to login with
+      password:
+        value_type: args
+        args_schema:
+          type: string
+          example: "123!"
+          description: The password to login with
+      mfa_secret:
+        value_type: args
+        args_schema:
+          type: string
+          example: "FZJUYZ"
+          description: The MFA secret to login with
+      login_instructions:
+        value_type: args
+        args_schema:
+          type: string
+          example: "put the username in the username field and password in the password field, then you need to input the one time password from MFA, after that, click the Continue button."
+          description: The instructions to login with
+      screenshot_target_information:
+        value_type: args
+        args_schema:
+          type: string
+          example: "Take a screenshot of the table showing this resource"
+          description: The target to be taken screeshot of
+      page_audit_check_information:
+        value_type: args
+        args_schema:
+          type: string
+          example: "Verify that a resource for credit_defaults_model appearss in this search with a resource status of Active."
+          description: The information to be checked on the page audit
+
+edges:
+  - source: 0
+    target: 1

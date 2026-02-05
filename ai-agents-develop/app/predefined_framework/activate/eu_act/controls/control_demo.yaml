@@ -1,0 +1,33 @@
+control_name: control_demo
+control_description: This is a demo control. Take the input from entity and add 1 two times
+action_instances:
+  - action_prototype_name: START
+    order: 0
+
+  - action_prototype_name: sample
+    order: 1
+    control_variables: {}
+    reference_variables: {}
+    independent_variables:
+      input:
+        value_type: args
+        args_schema:
+          type: int
+          example: "5"
+          description: a number
+
+  - action_prototype_name: sample
+    order: 2
+    control_variables: {}
+    reference_variables:
+      input:
+        value_type: ref
+        action_index: 1
+        field: output
+    independent_variables: {}
+
+edges:
+  - source: 0
+    target: 1
+  - source: 1
+    target: 2

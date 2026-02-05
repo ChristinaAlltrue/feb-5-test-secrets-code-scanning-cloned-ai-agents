@@ -1,0 +1,7 @@
+framework_name: qa
+framework_description: qa_framework
+logo_url: https://media.licdn.com/dms/image/v2/D560BAQFQedyHfJ8j-g/company-logo_200_200/B56ZXyTamsGQAM-/0/1743526931287/alltrue_ai_logo?e=2147483647&v=beta&t=N_MdW5_uE8JAG8lr60E2T5Q1KnYoRLJcIJkXzb6hVr0
+controls:
+  - !include controls/control_gateway.yaml
+  - !include controls/control_spm.yaml
+  - !include controls/control_ai_inventory.yaml

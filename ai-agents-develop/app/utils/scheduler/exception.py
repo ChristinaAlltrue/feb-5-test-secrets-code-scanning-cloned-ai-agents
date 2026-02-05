@@ -1,0 +1,2 @@
+class ReschduledJobException(Exception):
+    pass

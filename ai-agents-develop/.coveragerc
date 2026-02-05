@@ -1,0 +1,14 @@
+[run]
+branch = True
+omit =
+    tests/*
+    */__init__.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if TYPE_CHECKING:
+    if __name__ == .__main__.:
+
+fail_under = 70
+show_missing = True
