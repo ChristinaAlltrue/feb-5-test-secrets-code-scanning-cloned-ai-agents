@@ -1,0 +1,6 @@
+[server]
+maxUploadSize = 25
+port = 8050
+
+[browser]
+gatherUsageStats = false
